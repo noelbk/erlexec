@@ -1,6 +1,7 @@
 // vim:ts=4:sw=4:et
 #include "exec.hpp"
 #include <errno.h>
+#include <stdlib.h>
 
 namespace ei {
 
@@ -410,13 +411,21 @@ pid_t start_child(CmdOptions& op, std::string& error)
             close(i);
 
         if (op.pty()) {
-            struct termios ios;
-            tcgetattr(STDIN_FILENO, &ios);
-            // Disable the ECHO mode
-            ios.c_lflag &= ~(ECHO | ECHONL | ECHOE | ECHOK);
-            // We don't check if it succeeded because if the STDIN is not a terminal
-            // it won't be able to disable the ECHO anyway.
-            tcsetattr(STDIN_FILENO, TCSANOW, &ios);
+
+            int op_terminal = 1;
+            if( op_terminal ) {
+                // TODO(noelbk): add op.terminal() option and clean up environment
+                putenv((char*)"TERM=xterm");
+            }
+            else {
+                struct termios ios;
+                tcgetattr(STDIN_FILENO, &ios);
+                // Disable the ECHO mode
+                ios.c_lflag &= ~(ECHO | ECHONL | ECHOE | ECHOK);
+                // We don't check if it succeeded because if the STDIN is not a terminal
+                // it won't be able to disable the ECHO anyway.
+                tcsetattr(STDIN_FILENO, TCSANOW, &ios);
+            }
 
             // Make the current process a new session leader
             setsid();
